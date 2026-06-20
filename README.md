@@ -23,6 +23,38 @@
 
 ---
 
+## 补充说明：AI 生成报告是在哪里实现的
+
+本项目中，真正负责“调用 AI 并生成评估报告”的核心接口文件是：
+
+- [app/api/analyze/route.ts](app/api/analyze/route.ts)
+
+这个文件主要负责以下事情：
+
+1. 接收前端上传的 Excel 文件和用户选择的评估指标
+2. 使用 `xlsx` 解析 Excel 数据
+3. 把表格数据、字段信息、评估规则整理成一段完整的提示词（Prompt）
+4. 调用 AI 模型生成质量评估报告
+5. 把 AI 返回的文本流式返回给前端页面显示
+
+当前项目里使用的并不是 AI 官方原始域名直连方式，而是通过中转平台：
+
+- https://aihubmix.com/
+
+在代码里可以看到两个关键信息：
+
+- 使用的密钥变量名是 `AIHUBMIX_API_KEY`
+- 请求地址基于 `https://aihubmix.com`
+
+也就是说：
+
+- `app/api/analyze/route.ts` 是“AI 报告生成入口”
+- `.env.local` 是“给这个入口提供密钥配置的地方”
+
+如果后续你要更换模型、切换 AI 平台、或者改成自己的接口地址，通常就是从 [app/api/analyze/route.ts](app/api/analyze/route.ts) 这里开始改。
+
+---
+
 ## 一、在新电脑上运行本项目前，需要准备什么
 
 如果你是一台新电脑，建议先安装下面这些工具。
@@ -149,11 +181,35 @@ pnpm install
 AIHUBMIX_API_KEY=请填写你自己的密钥
 ```
 
+#### `.env.local` 在这里的作用是什么？
+
+可以把 `.env.local` 理解成：
+
+- 这个项目在你自己电脑上的“本地配置文件”
+- 专门用来保存敏感信息和每台电脑可能不同的参数
+
+在当前项目里，它最重要的作用就是：
+
+- 给 [app/api/analyze/route.ts](app/api/analyze/route.ts) 提供 `AIHUBMIX_API_KEY`
+
+代码运行时，会读取：
+
+- `process.env.AIHUBMIX_API_KEY`
+
+如果 `.env.local` 里没有这个值，那么项目虽然能打开页面，但在真正生成报告时会失败，并返回“未配置 AIHUBMIX_API_KEY”的错误。
+
+你可以把它简单理解为：
+
+- 前端页面负责上传文件和展示结果
+- [app/api/analyze/route.ts](app/api/analyze/route.ts) 负责调用 AI
+- `.env.local` 负责告诉后端“调用 AI 时该用哪一个密钥”
+
 注意：
 
 - 等号右边替换成你自己的真实密钥
 - 不要加中文引号
 - 不要把这个文件上传到 GitHub
+- 这个文件只在你自己的电脑生效，不同电脑都要各自创建
 
 ### 第 4 步：启动开发环境
 
@@ -346,6 +402,14 @@ lib/                    规则、PDF、HTML、质量评估相关逻辑
 public/                 静态资源
 styles/                 全局样式
 ```
+
+其中最关键的几个位置如下：
+
+- [app/page.tsx](app/page.tsx)：前端主页面
+- [app/api/analyze/route.ts](app/api/analyze/route.ts)：解析数据并调用 AI 生成报告
+- [lib/dimensions-data.ts](lib/dimensions-data.ts)：内置评估维度和二级指标配置
+- [.env.example](.env.example)：环境变量示例
+- `.env.local`：你本地真实使用的密钥配置文件（不会上传到 GitHub）
 
 ---
 
